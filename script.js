@@ -24,32 +24,75 @@ window.addEventListener('load', () => {
     }, 50);
 });
 
-// Detect if device is mobile/tablet
-const isMobile = window.innerWidth <= 1024;
+// ==================== DEVICE DETECTION ====================
+const isMobileDevice = window.innerWidth <= 1024;
 
-// Hamburger Menu Toggle
-const hamburger = document.querySelector('.hamburger');
-const mobileMenu = document.querySelector('.mobile-menu');
-const mobileMenuLinks = document.querySelectorAll('.mobile-menu-content h4');
-
-if (hamburger) {
-    hamburger.addEventListener('click', () => {
-        hamburger.classList.toggle('active');
-        mobileMenu.classList.toggle('active');
-        document.body.style.overflow = mobileMenu.classList.contains('active') ? 'hidden' : '';
+// ==================== ENHANCED CUSTOM CURSOR ====================
+if (!isMobileDevice) {
+    const cursor = document.querySelector(".cursor");
+    let mouseX = 0, mouseY = 0;
+    let cursorX = 0, cursorY = 0;
+    
+    // Smooth cursor follow
+    document.addEventListener("mousemove", function(e) {
+        mouseX = e.clientX;
+        mouseY = e.clientY;
     });
-
-    // Close menu when clicking on a link
-    mobileMenuLinks.forEach(link => {
-        link.addEventListener('click', () => {
-            hamburger.classList.remove('active');
-            mobileMenu.classList.remove('active');
-            document.body.style.overflow = '';
+    
+    function animateCursor() {
+        const diffX = mouseX - cursorX;
+        const diffY = mouseY - cursorY;
+        
+        cursorX += diffX * 0.15;
+        cursorY += diffY * 0.15;
+        
+        if (cursor) {
+            cursor.style.left = cursorX + 'px';
+            cursor.style.top = cursorY + 'px';
+        }
+        
+        requestAnimationFrame(animateCursor);
+    }
+    
+    animateCursor();
+    
+    // Cursor hover effects for all interactive elements
+    const hoverElements = document.querySelectorAll(
+        'a, button, [data-scroll-to], .box, .elem, .nav-logo, .nav-item, .nav-btn, .social-link, .mobile-nav-close, .mobile-nav-item'
+    );
+    
+    hoverElements.forEach(el => {
+        el.addEventListener('mouseenter', () => {
+            cursor.classList.add('cursor-hover');
         });
+        
+        el.addEventListener('mouseleave', () => {
+            cursor.classList.remove('cursor-hover');
+        });
+    });
+    
+    // Cursor click effect
+    document.addEventListener('mousedown', () => {
+        cursor.classList.add('cursor-click');
+    });
+    
+    document.addEventListener('mouseup', () => {
+        cursor.classList.remove('cursor-click');
     });
 }
 
-// Initialize Locomotive Scroll and GSAP
+// ==================== NAVIGATION ELEMENTS ====================
+const nav = document.getElementById('nav');
+const navLogo = document.querySelector('.nav-logo');
+const navItems = document.querySelectorAll('.nav-item');
+const navHamburger = document.querySelector('.nav-hamburger');
+const mobileNav = document.querySelector('.mobile-nav');
+const mobileNavClose = document.querySelector('.mobile-nav-close');
+const mobileNavOverlay = document.querySelector('.mobile-nav-overlay');
+const mobileNavItems = document.querySelectorAll('.mobile-nav-item');
+const allNavLinks = document.querySelectorAll('[data-scroll-to]');
+
+// ==================== LOCOMOTIVE SCROLL INITIALIZATION ====================
 let locoScroll;
 
 function init() {
@@ -58,7 +101,7 @@ function init() {
     locoScroll = new LocomotiveScroll({
         el: document.querySelector(".main"),
         smooth: true,
-        multiplier: isMobile ? 0.8 : 1,
+        multiplier: isMobileDevice ? 0.8 : 1,
         smoothMobile: true,
         smartphone: {
             smooth: true,
@@ -88,53 +131,303 @@ function init() {
 
 init();
 
-// Smooth Scroll Navigation
+// ==================== SMOOTH SCROLL FUNCTIONALITY ====================
 function scrollToSection(targetId) {
     const target = document.getElementById(targetId);
     if (target && locoScroll) {
-        const targetPosition = target.offsetTop;
-        locoScroll.scrollTo(targetPosition, {
-            duration: 1500,
-            easing: [0.25, 0.0, 0.35, 1.0]
+        locoScroll.scrollTo(target, {
+            duration: 1400,
+            easing: [0.25, 0.0, 0.35, 1.0],
+            offset: -80
         });
     }
 }
 
-// Navigation click handlers
-const navItems = document.querySelectorAll('[data-scroll-to]');
-navItems.forEach(item => {
-    item.addEventListener('click', (e) => {
+// Handle all navigation clicks
+allNavLinks.forEach(link => {
+    link.addEventListener('click', (e) => {
         e.preventDefault();
-        const targetId = item.getAttribute('data-scroll-to');
-        scrollToSection(targetId);
+        const targetId = link.getAttribute('data-scroll-to');
         
         // Close mobile menu if open
-        if (mobileMenu && mobileMenu.classList.contains('active')) {
-            hamburger.classList.remove('active');
-            mobileMenu.classList.remove('active');
-            document.body.style.overflow = '';
+        closeMobileMenu();
+        
+        // Scroll to section
+        scrollToSection(targetId);
+        
+        // Update active state for desktop nav
+        if (!isMobileDevice) {
+            updateActiveNavItem(targetId);
         }
     });
 });
 
-// Custom Cursor - Only for desktop
-if (!isMobile) {
-    const cursor = document.querySelector(".cursor");
-    
-    let mouseX = 0, mouseY = 0;
-    
-    document.addEventListener("mousemove", function(e) {
-        mouseX = e.clientX;
-        mouseY = e.clientY;
-        
-        if (cursor) {
-            cursor.style.left = mouseX + 'px';
-            cursor.style.top = mouseY + 'px';
+// Update active nav item
+function updateActiveNavItem(activeId) {
+    navItems.forEach(item => {
+        const itemTarget = item.getAttribute('data-scroll-to');
+        if (itemTarget === activeId) {
+            item.classList.add('active');
+        } else {
+            item.classList.remove('active');
         }
     });
 }
 
-// Hero Section Animations
+// ==================== MOBILE MENU FUNCTIONALITY ====================
+function openMobileMenu() {
+    navHamburger.classList.add('active');
+    mobileNav.classList.add('active');
+    mobileNavOverlay.classList.add('active');
+    document.body.style.overflow = 'hidden';
+    
+    // Animate menu items
+    gsap.from('.mobile-nav-item', {
+        x: 100,
+        opacity: 0,
+        duration: 0.6,
+        stagger: 0.1,
+        ease: "power3.out",
+        delay: 0.2
+    });
+    
+    gsap.from('.mobile-nav-cta', {
+        y: 50,
+        opacity: 0,
+        duration: 0.6,
+        delay: 0.6,
+        ease: "power3.out"
+    });
+    
+    gsap.from('.mobile-nav-info', {
+        y: 30,
+        opacity: 0,
+        duration: 0.6,
+        delay: 0.7,
+        ease: "power3.out"
+    });
+    
+    gsap.from('.mobile-nav-social .social-link', {
+        scale: 0,
+        opacity: 0,
+        duration: 0.4,
+        stagger: 0.05,
+        delay: 0.8,
+        ease: "back.out(1.7)"
+    });
+}
+
+function closeMobileMenu() {
+    navHamburger.classList.remove('active');
+    mobileNav.classList.remove('active');
+    mobileNavOverlay.classList.remove('active');
+    document.body.style.overflow = '';
+}
+
+// Hamburger click
+if (navHamburger) {
+    navHamburger.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (mobileNav.classList.contains('active')) {
+            closeMobileMenu();
+        } else {
+            openMobileMenu();
+        }
+    });
+}
+
+// Close button click
+if (mobileNavClose) {
+    mobileNavClose.addEventListener('click', closeMobileMenu);
+}
+
+// Overlay click
+if (mobileNavOverlay) {
+    mobileNavOverlay.addEventListener('click', closeMobileMenu);
+}
+
+// Mobile nav item clicks
+mobileNavItems.forEach(item => {
+    item.addEventListener('click', () => {
+        const targetId = item.getAttribute('data-scroll-to');
+        closeMobileMenu();
+        setTimeout(() => {
+            scrollToSection(targetId);
+        }, 400);
+    });
+});
+
+// Close menu on ESC key
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && mobileNav.classList.contains('active')) {
+        closeMobileMenu();
+    }
+});
+
+// ==================== NAVIGATION SCROLL EFFECTS ====================
+let lastScrollY = 0;
+let scrollDirection = 'up';
+
+if (locoScroll) {
+    locoScroll.on('scroll', (args) => {
+        const currentScroll = args.scroll.y;
+        
+        // Determine scroll direction
+        scrollDirection = currentScroll > lastScrollY ? 'down' : 'up';
+        lastScrollY = currentScroll;
+        
+        // Add scrolled class
+        if (currentScroll > 50) {
+            nav.classList.add('nav-scrolled');
+        } else {
+            nav.classList.remove('nav-scrolled');
+        }
+        
+        // Update active nav based on scroll position
+        updateActiveNavOnScroll(currentScroll);
+    });
+}
+
+// Update active navigation based on scroll position
+function updateActiveNavOnScroll(scrollY) {
+    const sections = ['hero', 'studio', 'work', 'contact'];
+    const windowHeight = window.innerHeight;
+    const threshold = windowHeight * 0.3;
+    
+    sections.forEach(sectionId => {
+        const section = document.getElementById(sectionId);
+        if (section) {
+            const rect = section.getBoundingClientRect();
+            const sectionTop = scrollY + rect.top;
+            const sectionBottom = sectionTop + rect.height;
+            
+            if (scrollY >= sectionTop - threshold && scrollY < sectionBottom - threshold) {
+                updateActiveNavItem(sectionId);
+            }
+        }
+    });
+}
+
+// ==================== NAVIGATION ANIMATIONS ====================
+
+// Logo hover animation
+if (navLogo) {
+    navLogo.addEventListener('mouseenter', () => {
+        if (!isMobileDevice) {
+            gsap.to('.logo-container', {
+                rotation: 360,
+                scale: 1.1,
+                duration: 0.6,
+                ease: "power2.out"
+            });
+        }
+    });
+    
+    navLogo.addEventListener('mouseleave', () => {
+        if (!isMobileDevice) {
+            gsap.to('.logo-container', {
+                rotation: 0,
+                scale: 1,
+                duration: 0.6,
+                ease: "power2.out"
+            });
+        }
+    });
+}
+
+// Nav items hover animation
+navItems.forEach(item => {
+    if (!isMobileDevice) {
+        item.addEventListener('mouseenter', () => {
+            gsap.to(item.querySelector('.nav-link'), {
+                y: -2,
+                duration: 0.3,
+                ease: "power2.out"
+            });
+        });
+        
+        item.addEventListener('mouseleave', () => {
+            if (!item.classList.contains('active')) {
+                gsap.to(item.querySelector('.nav-link'), {
+                    y: 0,
+                    duration: 0.3,
+                    ease: "power2.out"
+                });
+            }
+        });
+    }
+});
+
+// Button magnetic effect (desktop only)
+if (!isMobileDevice) {
+    const navButtons = document.querySelectorAll('.nav-btn, .footer-cta, .mobile-cta-btn, .page2-right button');
+    
+    navButtons.forEach(button => {
+        button.addEventListener('mousemove', (e) => {
+            const rect = button.getBoundingClientRect();
+            const x = e.clientX - rect.left - rect.width / 2;
+            const y = e.clientY - rect.top - rect.height / 2;
+            
+            gsap.to(button, {
+                x: x * 0.3,
+                y: y * 0.3,
+                duration: 0.3,
+                ease: "power2.out"
+            });
+        });
+        
+        button.addEventListener('mouseleave', () => {
+            gsap.to(button, {
+                x: 0,
+                y: 0,
+                duration: 0.5,
+                ease: "elastic.out(1, 0.5)"
+            });
+        });
+    });
+}
+
+// ========== FIXED: Initial nav animation - REMOVED transform animations ==========
+// Simply fade in the nav without moving it
+gsap.from('#nav', {
+    opacity: 0,
+    duration: 1,
+    delay: 0.5,
+    ease: "power3.out"
+});
+
+gsap.from('.nav-logo', {
+    opacity: 0,
+    duration: 0.8,
+    delay: 0.7,
+    ease: "power3.out"
+});
+
+gsap.from('.nav-item', {
+    opacity: 0,
+    duration: 0.6,
+    stagger: 0.1,
+    delay: 0.8,
+    ease: "power3.out"
+});
+
+gsap.from('.nav-btn', {
+    scale: 0.8,
+    opacity: 0,
+    duration: 0.6,
+    stagger: 0.1,
+    delay: 1,
+    ease: "back.out(1.7)"
+});
+
+gsap.from('.nav-status', {
+    opacity: 0,
+    duration: 0.8,
+    delay: 1.2,
+    ease: "power3.out"
+});
+
+// ==================== HERO SECTION ANIMATIONS ====================
 gsap.from(".hero-badge", {
     y: 30,
     opacity: 0,
@@ -176,7 +469,7 @@ gsap.from(".page1 video", {
 });
 
 // Scroll-triggered animations for hero - Only for desktop
-if (!isMobile) {
+if (!isMobileDevice) {
     const heroTimeline = gsap.timeline({
         scrollTrigger: {
             trigger: ".page1 h1",
@@ -203,7 +496,7 @@ if (!isMobile) {
     }, "sync");
 }
 
-// Background color transitions
+// ==================== BACKGROUND COLOR TRANSITIONS ====================
 const bgTimeline1 = gsap.timeline({
     scrollTrigger: {
         trigger: ".page2",
@@ -231,6 +524,8 @@ const bgTimeline2 = gsap.timeline({
 bgTimeline2.to(".main", {
     backgroundColor: "#0F0D0D"
 });
+
+// ==================== SECTION ANIMATIONS ====================
 
 // Section fade-in animations
 gsap.utils.toArray('.section-label').forEach(label => {
@@ -300,8 +595,8 @@ gsap.utils.toArray('.project-item').forEach((item, index) => {
     });
 });
 
-// Services hover effects - Enhanced for desktop
-if (!isMobile) {
+// ==================== SERVICES HOVER EFFECTS ====================
+if (!isMobileDevice) {
     const services = document.querySelectorAll(".elem");
     
     services.forEach(elem => {
@@ -364,8 +659,8 @@ if (!isMobile) {
     });
 }
 
-// Client boxes hover with cursor effect - Enhanced
-if (!isMobile) {
+// ==================== CLIENT BOXES HOVER ====================
+if (!isMobileDevice) {
     const boxes = document.querySelectorAll(".box");
     const cursor = document.querySelector(".cursor");
     
@@ -397,8 +692,8 @@ if (!isMobile) {
                 height: "20px",
                 borderRadius: "50%",
                 backgroundImage: "none",
-                backgroundColor: "#EDBFFF",
-                border: "none",
+                backgroundColor: "rgba(237, 191, 255, 0.4)",
+                border: "2px solid #EDBFFF",
                 duration: 0.5,
                 ease: "power3.in"
             });
@@ -411,29 +706,8 @@ if (!isMobile) {
     });
 }
 
-// Navigation hover effects
-const navItemsHover = document.querySelectorAll("#nav h4");
-const purple = document.querySelector("#purple");
-const nav = document.querySelector("#nav");
-
-navItemsHover.forEach(item => {
-    item.addEventListener("mouseenter", function() {
-        purple.classList.add('active');
-        if (nav) {
-            nav.classList.add('light-mode');
-        }
-    });
-    
-    item.addEventListener("mouseleave", function() {
-        purple.classList.remove('active');
-        if (nav) {
-            nav.classList.remove('light-mode');
-        }
-    });
-});
-
-// Parallax effect for videos - Only for desktop
-if (!isMobile) {
+// ==================== PARALLAX EFFECT ====================
+if (!isMobileDevice) {
     gsap.utils.toArray('video').forEach(video => {
         gsap.to(video, {
             scrollTrigger: {
@@ -448,7 +722,7 @@ if (!isMobile) {
     });
 }
 
-// Footer animation
+// ==================== FOOTER ANIMATIONS ====================
 gsap.from(".footer-top h2", {
     scrollTrigger: {
         trigger: "footer",
@@ -490,39 +764,58 @@ gsap.from(".footer-col", {
     ease: "power3.out"
 });
 
-// Add magnetic effect to buttons - Only for desktop
-if (!isMobile) {
-    document.querySelectorAll('button').forEach(button => {
-        button.addEventListener('mousemove', (e) => {
-            const rect = button.getBoundingClientRect();
-            const x = e.clientX - rect.left - rect.width / 2;
-            const y = e.clientY - rect.top - rect.height / 2;
-            
-            gsap.to(button, {
-                x: x * 0.3,
-                y: y * 0.3,
-                duration: 0.3,
-                ease: "power2.out"
-            });
+// ==================== CTA BUTTON FUNCTIONALITY ====================
+const ctaButtons = document.querySelectorAll('.nav-btn-primary, .footer-cta, .mobile-cta-btn, .nav-btn-secondary');
+
+ctaButtons.forEach(button => {
+    button.addEventListener('click', (e) => {
+        e.preventDefault();
+        
+        // Ripple effect
+        const ripple = document.createElement('span');
+        ripple.style.position = 'absolute';
+        ripple.style.borderRadius = '50%';
+        ripple.style.background = 'rgba(255, 255, 255, 0.5)';
+        ripple.style.width = '20px';
+        ripple.style.height = '20px';
+        ripple.style.pointerEvents = 'none';
+        
+        const rect = button.getBoundingClientRect();
+        ripple.style.left = (e.clientX - rect.left - 10) + 'px';
+        ripple.style.top = (e.clientY - rect.top - 10) + 'px';
+        
+        button.appendChild(ripple);
+        
+        gsap.to(ripple, {
+            width: 300,
+            height: 300,
+            opacity: 0,
+            duration: 0.6,
+            ease: "power2.out",
+            onComplete: () => ripple.remove()
         });
         
-        button.addEventListener('mouseleave', () => {
-            gsap.to(button, {
-                x: 0,
-                y: 0,
-                duration: 0.5,
-                ease: "elastic.out(1, 0.5)"
-            });
-        });
+        // Scroll to contact
+        setTimeout(() => {
+            scrollToSection('contact');
+        }, 300);
     });
-}
+});
 
-// Optimize performance on resize
-let resizeTimer;
+// ==================== WINDOW RESIZE HANDLER ====================
+let resizeTimeout;
 window.addEventListener('resize', () => {
-    clearTimeout(resizeTimer);
-    resizeTimer = setTimeout(() => {
+    clearTimeout(resizeTimeout);
+    resizeTimeout = setTimeout(() => {
+        // Close mobile menu if resizing to desktop
+        if (window.innerWidth > 1024 && mobileNav.classList.contains('active')) {
+            closeMobileMenu();
+        }
+        
+        // Refresh ScrollTrigger
         ScrollTrigger.refresh();
+        
+        // Update Locomotive Scroll
         if (locoScroll) {
             locoScroll.update();
         }
